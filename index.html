@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة نقل المشتقات النفطية</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <aside class="sidebar">
+        <h2>نظام النقل</h2>
+        <ul>
+            <li><a href="#" class="active">لوحة التحكم</a></li>
+            <li><a href="#">إدارة النقلات</a></li>
+            <li><a href="#">إدارة الناقلين</a></li>
+            <li><a href="#">سيارات الشركة</a></li>
+            <li><a href="#">الفواتير</a></li>
+            <li><a href="#">التقارير</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header>
+            <h1>لوحة التحكم (Dashboard)</h1>
+        </header>
+
+        <section class="dashboard-cards">
+            <div class="card">
+                <h3>عدد النقلات اليومية</h3>
+                <p id="daily-trips">15 نقلة</p>
+            </div>
+            <div class="card">
+                <h3>عدد النقلات الشهرية</h3>
+                <p id="monthly-trips">450 نقلة</p>
+            </div>
+            <div class="card">
+                <h3>مجموع الديون</h3>
+                <p id="total-debts">1,250,000 د.ع</p>
+            </div>
+        </section>
+
+        <section class="trips-section">
+            <h2>تسجيل نقلة جديدة</h2>
+            <form id="trip-form">
+                <div class="form-group">
+                    <label for="doc-number">رقم المستند:</label>
+                    <input type="text" id="doc-number" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="trip-date">التاريخ:</label>
+                    <input type="date" id="trip-date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="driver-name">اسم السائق (اكتب 'علي' أو 'عمر' للتجربة):</label>
+                    <input type="text" id="driver-name" placeholder="ابحث عن اسم السائق..." autocomplete="off" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="factory-name">المعمل:</label>
+                    <select id="factory-name" required>
+                        <option value="">اختر المعمل...</option>
+                        <option value="مصفي الدورة">مصفي الدورة</option>
+                        <option value="مصفي بيجي">مصفي بيجي</option>
+                    </select>
+                </div>
+
+                <div class="auto-fill-section">
+                    <h3>بيانات تلقائية (بناءً على السائق)</h3>
+                    <div class="form-group">
+                        <label>رقم السيارة:</label>
+                        <input type="text" id="truck-number" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>اسم الناقل:</label>
+                        <input type="text" id="carrier-name" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>الحمولة (لتر):</label>
+                        <input type="text" id="capacity" readonly>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit">حفظ النقلة</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

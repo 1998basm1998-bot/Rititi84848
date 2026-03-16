@@ -25,6 +25,20 @@ function exportToExcel(filename, headers, rows) {
     document.body.removeChild(link);
 }
 
+// دالة قراءة ملف Excel
+function readExcelFile(file, callback) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet);
+        callback(json);
+    };
+    reader.readAsArrayBuffer(file);
+}
+
 const Dashboard = {
     template: `
         <div>
@@ -101,6 +115,22 @@ const Expenses = {
             const headers = ['التاريخ', 'نوع المصروف', 'المبلغ', 'الملاحظات'];
             const rows = this.filteredExpenses.map(e => [e.date, e.type, e.amount, e.notes]);
             exportToExcel('المصاريف', headers, rows);
+        },
+        importExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            readExcelFile(file, (data) => {
+                data.forEach(row => {
+                    this.expenses.push({
+                        id: Date.now() + Math.random(),
+                        date: row['التاريخ'] || '',
+                        type: row['نوع المصروف'] || 'أخرى',
+                        amount: row['المبلغ'] || '',
+                        notes: row['الملاحظات'] || ''
+                    });
+                });
+                event.target.value = '';
+            });
         }
     },
     template: `
@@ -118,6 +148,8 @@ const Expenses = {
                 <button class="btn-warning" @click="openEditModal">تعديل</button>
                 <button class="btn-danger" @click="deleteExpense">حذف</button>
                 <button class="btn-primary" @click="exportData">تصدير Excel</button>
+                <input type="file" ref="fileInput" @change="importExcel" style="display:none" accept=".xlsx, .xls">
+                <button class="btn-primary" @click="$refs.fileInput.click()">استيراد Excel</button>
             </div>
 
             <table>
@@ -308,6 +340,31 @@ const Carriers = {
         save() {
             this.carriers.push({ ...this.form });
             this.showModal = false;
+        },
+        importExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            readExcelFile(file, (data) => {
+                data.forEach(row => {
+                    let carrierName = row['اسم الناقل'] || row['الناقل'] || 'غير معروف';
+                    let carrierPhone = row['رقم الهاتف'] || row['الهاتف'] || '';
+                    let truck = row['رقم السيارة'] || row['السيارة'] || '';
+                    let driver = row['السائق'] || row['اسم السائق'] || '';
+                    let capacity = row['الحمولة'] || '';
+                    
+                    let existingCarrier = this.carriers.find(c => c.name === carrierName);
+                    if(existingCarrier) {
+                        if(truck || driver) existingCarrier.cars.push({truck, driver, capacity});
+                    } else {
+                        this.carriers.push({
+                            name: carrierName,
+                            phone: carrierPhone,
+                            cars: (truck || driver) ? [{truck, driver, capacity}] : []
+                        });
+                    }
+                });
+                event.target.value = '';
+            });
         }
     },
     template: `
@@ -315,6 +372,8 @@ const Carriers = {
             <h2>إدارة الناقلين</h2>
             <div class="action-bar">
                 <button class="btn-success" @click="openAddModal">إضافة ناقل</button>
+                <input type="file" ref="fileInput" @change="importExcel" style="display:none" accept=".xlsx, .xls">
+                <button class="btn-primary" @click="$refs.fileInput.click()">رفع ملف Excel</button>
             </div>
             <table>
                 <tr><th>اسم الناقل</th><th>رقم الهاتف</th><th>عدد السيارات</th></tr>
@@ -594,7 +653,95 @@ const Reports = {
     `
 };
 
-const Documents = { template: `<div class="generic-section"><h2>وثائق سيارات الشركة</h2></div>` };
+const Documents = {
+    data() {
+        return {
+            documents: [],
+            showModal: false,
+            isEditing: false,
+            selectedId: null,
+            form: { id: null, truck: '', doc_type: 'سنوية', issue_date: '', expiry_date: '', notes: '' }
+        };
+    },
+    methods: {
+        openAddModal() {
+            this.form = { id: Date.now(), truck: '', doc_type: 'سنوية', issue_date: '', expiry_date: '', notes: '' };
+            this.isEditing = false;
+            this.showModal = true;
+        },
+        openEditModal() {
+            if (!this.selectedId) return alert('يرجى تحديد صف للتعديل');
+            const doc = this.documents.find(d => d.id === this.selectedId);
+            this.form = { ...doc };
+            this.isEditing = true;
+            this.showModal = true;
+        },
+        saveDocument() {
+            if (this.isEditing) {
+                const index = this.documents.findIndex(d => d.id === this.form.id);
+                this.documents[index] = { ...this.form };
+            } else {
+                this.documents.push({ ...this.form });
+            }
+            this.showModal = false;
+            this.selectedId = null;
+        },
+        deleteDocument() {
+            if (!this.selectedId) return alert('يرجى تحديد صف للحذف');
+            if (confirm('هل تريد حذف هذه الوثيقة؟')) {
+                this.documents = this.documents.filter(d => d.id !== this.selectedId);
+                this.selectedId = null;
+            }
+        },
+        selectRow(id) {
+            this.selectedId = id;
+        }
+    },
+    template: `
+        <div class="generic-section">
+            <h2>وثائق سيارات الشركة</h2>
+            <div class="action-bar">
+                <button class="btn-success" @click="openAddModal">إضافة وثيقة</button>
+                <button class="btn-warning" @click="openEditModal">تعديل</button>
+                <button class="btn-danger" @click="deleteDocument">حذف</button>
+            </div>
+            <table>
+                <tr>
+                    <th>رقم السيارة</th><th>نوع الوثيقة</th><th>تاريخ الإصدار</th><th>تاريخ النفاذ</th><th>الملاحظات</th>
+                </tr>
+                <tr v-for="doc in documents" :key="doc.id" @click="selectRow(doc.id)" :class="{'selected-row': selectedId === doc.id}">
+                    <td>{{ doc.truck }}</td>
+                    <td>{{ doc.doc_type }}</td>
+                    <td>{{ doc.issue_date }}</td>
+                    <td>{{ doc.expiry_date }}</td>
+                    <td>{{ doc.notes }}</td>
+                </tr>
+            </table>
+            <div v-if="showModal" class="modal-overlay">
+                <div class="modal-content">
+                    <h3>{{ isEditing ? 'تعديل وثيقة' : 'إضافة وثيقة' }}</h3>
+                    <div class="form-group"><label>رقم السيارة</label><input type="text" v-model="form.truck"></div>
+                    <div class="form-group">
+                        <label>نوع الوثيقة</label>
+                        <select v-model="form.doc_type">
+                            <option value="سنوية">سنوية</option>
+                            <option value="تأمين">تأمين</option>
+                            <option value="فحص بيئة">فحص بيئة</option>
+                            <option value="أخرى">أخرى</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>تاريخ الإصدار</label><input type="date" v-model="form.issue_date"></div>
+                    <div class="form-group"><label>تاريخ النفاذ</label><input type="date" v-model="form.expiry_date"></div>
+                    <div class="form-group"><label>الملاحظات</label><textarea v-model="form.notes"></textarea></div>
+                    <div class="modal-actions">
+                        <button class="btn-success" @click="saveDocument">حفظ</button>
+                        <button class="btn-danger" @click="showModal = false">إلغاء</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `
+};
 
 const routes = [
     { path: '/', component: Dashboard },
